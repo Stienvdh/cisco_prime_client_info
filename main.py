@@ -1,4 +1,4 @@
-import requests, os, csv
+import requests, os, csv, urllib.parse
 from dotenv import load_dotenv
 
 TELEVIC_DEVICE_TYPE = "Multimedia Handset touch"
@@ -33,7 +33,8 @@ def find_switch_for_mac(mac):
     prime_pass = os.environ['PRIME_PASSWORD']
 
     # Get client details for given MAC address
-    resp = requests.request("GET", f"https://{prime_host}/webacs/api/v4/data/Clients?macAddress=\"{mac}\".json", verify=False, auth=requests.auth.HTTPBasicAuth(prime_user, prime_pass))
+    url = f"https://{prime_host}/webacs/api/v4/data/Clients?macAddress=\"{mac}\".json"
+    resp = requests.request("GET", urllib.parse.quote(url), verify=False, auth=requests.auth.HTTPBasicAuth(prime_user, prime_pass))
     print(f"Response from Prime (status code): {resp.status_code}")
     print(f"Response from Prime (text): {resp.text}")
     resp_data = resp.json()['queryResponse']['entity']['clientsDTO']
