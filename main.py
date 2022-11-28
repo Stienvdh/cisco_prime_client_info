@@ -34,6 +34,8 @@ def find_switch_for_mac(mac):
 
     # Get client details for given MAC address
     resp = requests.request("GET", f"https://{prime_host}/webacs/api/v4/data/Clients?macAddress=\"{mac}\".json", verify=False, auth=requests.auth.HTTPBasicAuth(prime_user, prime_pass))
+    print(f"Response from Prime (status code): {resp.status_code}")
+    print(f"Response from Prime (text): {resp.text}")
     resp_data = resp.json()['queryResponse']['entity']['clientsDTO']
     switch_ip = resp_data['deviceIpAddress']['address']
     switch_interface = resp_data['clientInterface']
