@@ -22,7 +22,7 @@ def generate_switch_interface_list():
     
     # Write output switches/ports
     with open("output.csv", "w") as f:
-        writer = csv.writer(f, delimiter=";")
+        writer = csv.writer(f, delimiter=";", lineterminator="\n")
         writer.writerow(["Device MAC", "Switch IP", "Switch interface"])
         for entry in result:
             writer.writerow([entry['device'], entry['ip'], entry['port']])
@@ -33,13 +33,14 @@ def find_switch_for_mac(mac):
     prime_pass = os.environ['PRIME_PASSWORD']
 
     # Get client details for given MAC address
-    url = f"https://{prime_host}/webacs/api/v4/data/Clients?macAddress=\"{mac}\".json"
-    resp = requests.request("GET", urllib.parse.quote(url), verify=False, auth=requests.auth.HTTPBasicAuth(prime_user, prime_pass), verify=False)
-    print(f"Response from Prime (status code): {resp.status_code}")
-    print(f"Response from Prime (text): {resp.text}")
-    resp_data = resp.json()['queryResponse']['entity']['clientsDTO']
-    switch_ip = resp_data['deviceIpAddress']['address']
-    switch_interface = resp_data['clientInterface']
+    print(mac)
+    url = f"{prime_host}/webacs/api/v4/data/Clients.json?macAddress={mac.replace(':', '')}"
+    resp = requests.request("GET", "https://" + url, verify=False, auth=requests.auth.HTTPBasicAuth(prime_user, prime_pass))
+    client_url = resp.json()['queryResponse']['entityId'][0]['@url']
+    client_resp = requests.request("GET", client_url + ".json", verify=False, auth=requests.auth.HTTPBasicAuth(prime_user, prime_pass))
+    switch_det = client_resp.json()['queryResponse']['entity'][0]['clientsDTO']
+    switch_ip = switch_det['deviceName']
+    switch_interface = switch_det['clientInterface']
 
     return (switch_ip, switch_interface)
 
