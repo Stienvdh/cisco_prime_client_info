@@ -1,7 +1,9 @@
-import requests, os, csv, urllib.parse
+import requests, os, csv, urllib.parse, urllib3
 from dotenv import load_dotenv
 
 TELEVIC_DEVICE_TYPE = "Multimedia Handset touch"
+
+urllib3.disable_warnings()
 
 def generate_switch_interface_list():
     result = []
