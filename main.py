@@ -1,4 +1,4 @@
-import requests, os, csv, urllib.parse, urllib3
+import requests, os, csv, urllib.parse, urllib3, time
 from dotenv import load_dotenv
 
 TELEVIC_DEVICE_TYPE = "Multimedia Handset touch"
@@ -6,6 +6,7 @@ TELEVIC_DEVICE_TYPE = "Multimedia Handset touch"
 urllib3.disable_warnings()
 
 def generate_switch_interface_list():
+    st = time.time()
     result = []
 
     # Read input MAC addresses
@@ -28,6 +29,9 @@ def generate_switch_interface_list():
         writer.writerow(["Device MAC", "Switch IP", "Switch interface"])
         for entry in result:
             writer.writerow([entry['device'], entry['ip'], entry['port']])
+    elapsed_time = time.time() - st
+    print(len(result), "Televic devices found.")
+    print("Executed in:", round(elapsed_time,1), "secs")
 
 def find_switch_for_mac(mac):
     prime_host = os.environ['PRIME_HOST']
