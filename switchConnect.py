@@ -20,13 +20,25 @@ def switch_login():
                     username = os.environ['PRIME_USERNAME'],
                     password = os.environ['PRIME_PASSWORD'],
                 )
-            output = net_connect.send_command(
-                "sh int " + port
-            )
-            print(output)
+            output = modify_port(net_connect, port)
+            # print(output)
             prev_address = device_address
-        
-                
+
+def modify_port(switch, port):
+    config_list = [ "int " + port,]; config_output = None
+    port_power = switch.send_command("sh power in  " + port )
+    if "static" not in port_power:
+        # config_list += ["power in static max 30000",]
+        print("power set")
+    port_description = switch.send_command("sh int " + port + " description")
+    if "#televic_script" not in port_description:
+        # config_list += ["description #televic_script",]
+        print("description set")
+    if len(config_list) > 1:
+        config_output = switch.send_config_set(config_list)
+        switch.save_config()
+    return config_output
+
 if __name__ == "__main__":
     load_dotenv()
     switch_login()
