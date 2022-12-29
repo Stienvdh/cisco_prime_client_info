@@ -10,7 +10,7 @@ def generate_switch_interface_list():
     result = []
     i = 0
 
-    # Read input MAC addresses
+    ### Read input MAC addresses
     with open("input.csv", "r") as f:
         reader = csv.reader(f, delimiter=';')
         for line in reader:
@@ -25,8 +25,10 @@ def generate_switch_interface_list():
                         "ip" : switch_ip,
                         "port" : switch_interface
                     }]
+    ### Order result by switch ip
+    result = sorted(result, key=lambda x: x['ip'])
     
-    # Write output switches/ports
+    ### Write output switches/ports
     with open("output.csv", "w") as f:
         writer = csv.writer(f, delimiter=";", lineterminator="\n")
         writer.writerow(["Device MAC", "Switch IP", "Switch interface"])
@@ -40,7 +42,7 @@ def find_switch_for_mac(mac):
     prime_host = os.environ['PRIME_HOST']
     prime_user = os.environ['PRIME_USERNAME']
     prime_pass = os.environ['PRIME_PASSWORD']
-    # Get client details for given MAC address
+    ### Get client details for given MAC address
     url = f"{prime_host}/webacs/api/v4/data/Clients.json?macAddress={mac.replace(':', '')}"
     resp = requests.request("GET", "https://" + url, verify=False, auth=requests.auth.HTTPBasicAuth(prime_user, prime_pass))
     query_response = resp.json()['queryResponse']
