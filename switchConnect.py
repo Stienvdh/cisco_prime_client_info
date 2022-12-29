@@ -23,7 +23,7 @@ def switch_login():
                 net_connect = ConnectHandler(
                     device_type = "cisco_xe",
                     host = device_address,
-                    username = os.environ['PRIME_USERNAME'],
+                    username = os.environ['PRIME_USERNAME'], 
                     password = os.environ['PRIME_PASSWORD'],
                 )
                 port_list = []
