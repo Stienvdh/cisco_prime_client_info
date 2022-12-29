@@ -1,9 +1,11 @@
-import requests, os, csv, urllib.parse, urllib3
+import requests, os, csv, urllib.parse, urllib3, time
 from dotenv import load_dotenv
 from netmiko import ConnectHandler
 
 def switch_login():
-
+    st = time.time()
+    port_list = []
+    net_connect = None
     # Read output file switch addresses
     with open("output.csv", "r") as f:
         reader = csv.reader(f, delimiter=';')
@@ -12,19 +14,25 @@ def switch_login():
         for line in reader:
             device_address = line[1]
             port = line[2]
+            port = port.replace("gabitEthernet","")
             if prev_address != device_address:
-                print("this is a new session")
+                cleanup_config(net_connect, port_list)
                 net_connect = ConnectHandler(
                     device_type = "cisco_xe",
                     host = device_address,
                     username = os.environ['PRIME_USERNAME'],
                     password = os.environ['PRIME_PASSWORD'],
                 )
+                port_list = []
+            port_list.append(port)
             output = modify_port(net_connect, port)
             # print(output)
             prev_address = device_address
+        cleanup_config(net_connect, port_list)
+    print("Executed in:", round(time.time() - st,1), "secs")
 
 def modify_port(switch, port):
+    # Modify port config when necessary
     config_list = [ "int " + port,]; config_output = None
     port_power = switch.send_command("sh power in  " + port )
     if "static" not in port_power:
@@ -35,9 +43,28 @@ def modify_port(switch, port):
         # config_list += ["description #televic_script",]
         print("description set")
     if len(config_list) > 1:
-        config_output = switch.send_config_set(config_list)
-        switch.save_config()
-    return config_output
+        # config_output = switch.send_config_set(config_list)
+        # switch.save_config()
+        return config_output
+
+def cleanup_config(switch, port_list):
+    if switch is not None:
+        all_ports = switch.send_command("sh int desc | i #televic_script")
+        # Transform ports string into list and remove unnecessary info
+        all_ports = all_ports.split(sep= None, maxsplit=-1)
+        all_ports = all_ports[0::4]
+        # Create list with all ports that still have televic config but no televic device connected
+        old_ports = list(set(all_ports) - set(port_list))
+        if len(old_ports) > 0:
+            for old_port in old_ports:
+                config_list = [
+                "int " + old_port,
+                "default desc",
+                "power in auto",
+                ]
+                switch.send_config_set(config_list)
+            switch.save_config()
+    return None
 
 if __name__ == "__main__":
     load_dotenv()
