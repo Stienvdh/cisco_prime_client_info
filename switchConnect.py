@@ -12,14 +12,15 @@ def switch_login():
         next(reader)
         prev_address = ""
         for line in reader:
-            device_address = line[1]
-            port = line[2]
-            port = port.replace("gabitEthernet","")
+            device_address = line[0]
+            port = line[1]
             if prev_address != device_address:
-                cleanup_config(net_connect, port_list)
                 ### Save config after all changes have been made
                 if net_connect is not None:
-                    net_connect.save_config()
+                    print("Saving config")
+                    # cleanup_config(net_connect, port_list)
+                    # net_connect.save_config()
+                print("Connecting to", device_address)
                 net_connect = ConnectHandler(
                     device_type = "cisco_xe",
                     host = device_address,
@@ -28,51 +29,61 @@ def switch_login():
                 )
                 port_list = []
             port_list.append(port)
-            output = modify_port(net_connect, port)
+            output = modify_port(net_connect, port, line)
             prev_address = device_address
-        cleanup_config(net_connect, port_list)
+        # cleanup_config(net_connect, port_list)
         ### Save config after all changes have been made
-        net_connect.save_config()
+        print("Saving config")
+        # net_connect.save_config()
     print("Executed in:", round(time.time() - st,1), "secs")
-
-def modify_port(switch, port):
+### add port number to prints
+def modify_port(switch, port, line):
     ### Modify port config when necessary
     config_list = [ "int " + port,]; config_output = None
     
-    port_power = switch.send_command("sh power in  " + port )
-    if "static" not in port_power:
-        # config_list += ["power in static max 30000",]
-        print("power set")
+    port_power = line[2]
+    if "30w" in port_power:
+        config_list += ["power in static max 30000",]
+        print("power set to 30w")
         
-    port_description = switch.send_command("sh int " + port + " description")
-    if "#televic_script" not in port_description:
-        # config_list += ["description #televic_script",]
+    port_description = line[3]
+    if "add" in port_description:
+        ### add tag behind description
+        description = switch.send_command("sh int " + port + " description")
+        description = description.split(sep= None, maxsplit=-1)
+        description = description[3::4]
+        if len(description) <= 1:
+            description += " "
+            print(description)
+        config_list += ["description "+ description[1] + " #max_poe",]
         print("description set")
         
-    if len(config_list) > 1:
-        # config_output = switch.send_config_set(config_list)
-        return config_output
+    if len(config_list) <= 1:
+        cleanup_config(switch, port, line)
+    config_output = switch.send_config_set(config_list)
+    return config_output
 
-def cleanup_config(switch, port_list):
-    if switch is not None:
-        all_ports = switch.send_command("sh int desc | i #televic_script")
-        ### Transform ports string into list and remove unnecessary info
-        all_ports = all_ports.split(sep= None, maxsplit=-1)
-        ports_status = all_ports[1::4]
-        all_ports = all_ports[0::4]
-        ### Create list with all ports that still have televic config but no televic device connected
-        old_ports = list(set(all_ports) - set(port_list))
-        if len(old_ports) > 0:
-            for old_port,port_status in zip(old_ports,ports_status):
-                if port_status == "down":
-                    config_list = [
-                        "int " + old_port,
-                        "default desc",
-                        "power in auto",
-                    ]
-                    switch.send_config_set(config_list)
-    return None
-
+def cleanup_config(switch, port, line):
+    ### Modify port config when necessary
+    config_list = [ "int " + port,]; config_output = None
+    
+    port_power = line[2]
+    if "auto" in port_power:
+        config_list += ["power in auto",]
+        print("power set to auto")
+        
+    port_description = line[3]
+    if "remove" in port_description:
+        description = switch.send_command("sh int " + port + " description")
+        description = description.split(sep= None, maxsplit=-1)
+        description = description[3::4]
+        ### add tag behind description
+        config_list += ["description "+ description[1],]
+        print("Description changed back to" , description[1])
+        
+    config_output = switch.send_config_set(config_list)
+    return config_output
+    
 if __name__ == "__main__":
     load_dotenv()
     switch_login()
